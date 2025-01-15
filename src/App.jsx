@@ -7,6 +7,7 @@ import './App.css';
 const API_BASE = "https://ec-course-api.hexschool.io/v2";
 const API_PATH = "202501-react-shaoyu";
 const initTempProduct = {
+  id: "",
   imageUrl: "",
   imagesUrl: [],
   title: "",
@@ -144,11 +145,10 @@ function App() {
       const response = await axios.get(
         `${API_BASE}/api/${API_PATH}/admin/products?page=${currentPage}`
       );
-      const { total_pages, current_page, has_pre, has_next, category } = response.data.pagination;
+      const { total_pages, has_pre, has_next, category } = response.data.pagination;
       setPagination({
         ...pagination,
         total_pages: total_pages,
-        // current_page: current_page,
         has_pre: has_pre,
         has_next: has_next,
         category: category
@@ -353,6 +353,15 @@ function App() {
   }
 
   /**
+   * 清除暫存產品資料
+   */
+  const clearTempProduct = () => {
+    setTempProduct({
+      ...initTempProduct
+    });
+  }
+
+  /**
    * 提交新增產品表單
    * @returns {Promise<void>} 無返回值
    */
@@ -388,9 +397,65 @@ function App() {
         throw new Error(response.data.message);
       }
       alert("新增商品成功");
+      clearTempProduct();
       fetchProducts();
     } catch (error) {
       alert("新增商品失敗: " + error);
+      productModalRef.current.show();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * 處理編輯產品的邏輯
+   * @param {Object} product - 要編輯的產品對象
+   */
+  const handleEditProduct = (product) => {
+    setTempProduct(product);
+    productModalRef.current.show();
+  };
+
+  /**
+   * 提交編輯產品表單
+   * @returns {Promise<void>} 無返回值
+   */
+  const handleSubmitEditProduct = async () => {
+    if (false === checkRequired()) {
+      return;
+    }
+
+    if (false === checkPrice(tempProduct.origin_price)) {
+      alert("原價請輸入大於 0 的數字");
+      return;
+    }
+
+    if (false === checkPrice(tempProduct.price)) {
+      alert("售價請輸入大於 0 的數字");
+      return;
+    }
+
+    setIsLoading(true);
+    productModalRef.current.hide();
+
+    const reqPayload = {
+      ...tempProduct,
+      origin_price: Number(tempProduct.origin_price),
+      price: Number(tempProduct.price),
+    };
+
+    try {
+      const response = await axios.put(`${API_BASE}/api/${API_PATH}/admin/product/${tempProduct.id}`, {
+        data: reqPayload,
+      });
+      if (!response.data.success) {
+        throw new Error(response.data.message);
+      }
+      alert("編輯商品成功");
+      clearTempProduct();
+      fetchProducts();
+    } catch (error) {
+      alert("編輯商品失敗: " + error);
       productModalRef.current.show();
     } finally {
       setIsLoading(false);
@@ -440,7 +505,7 @@ function App() {
                       </td>
                       <td>
                         <div className="btn-group">
-                          <button type="button" className="btn btn-outline-primary btn-sm">
+                          <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => handleEditProduct(item)}>
                             編輯
                           </button>
                           <button type="button" className="btn btn-outline-danger btn-sm">
@@ -548,7 +613,7 @@ function App() {
           <div className="modal-content border-0">
             <div className="modal-header bg-dark text-white">
               <h5 id="productModalLabel" className="modal-title">
-                <span>新增產品</span>
+                <span>{tempProduct.id ? "編輯":"新增" }產品</span>
               </h5>
               <button
                 type="button"
@@ -576,7 +641,7 @@ function App() {
                     </div>
                     <img className="img-fluid" src={tempProduct.imageUrl} alt="" />
                   </div>
-                  {tempProduct.imagesUrl.map((url, index) => (
+                  {tempProduct.imagesUrl && tempProduct.imagesUrl.map((url, index) => (
                     <div className="mb-2" key={index}>
                       <input
                         type="text"
@@ -713,7 +778,7 @@ function App() {
               >
                 取消
               </button>
-              <button type="button" className="btn btn-primary" onClick={handleSubmittempProduct}>
+              <button type="button" className="btn btn-primary" onClick={tempProduct.id ? handleSubmitEditProduct : handleSubmittempProduct}>
                 確認
               </button>
             </div>
