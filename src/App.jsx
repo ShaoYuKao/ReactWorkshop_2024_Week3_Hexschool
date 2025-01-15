@@ -6,6 +6,18 @@ import './App.css';
 
 const API_BASE = "https://ec-course-api.hexschool.io/v2";
 const API_PATH = "202501-react-shaoyu";
+const initTempProduct = {
+  imageUrl: "",
+  imagesUrl: [],
+  title: "",
+  category: "",
+  unit: "",
+  origin_price: 0,
+  price: 0,
+  description: "",
+  content: "",
+  is_enabled: false,
+};
 
 function App() {
   const [formData, setFormData] = useState({
@@ -14,7 +26,7 @@ function App() {
   }); // 登入表單資料
   const [isAuth, setIsAuth] = useState(false);  // 是否為管理員
   const [products, setProducts] = useState([]); // 產品列表
-  const [tempProduct, setTempProduct] = useState(null); // 單一產品細節
+  // const [tempProduct, setTempProduct] = useState(null); // 單一產品細節
   const [isLoading, setIsLoading] = useState(false); // 是否載入中
   const [pagination, setPagination] = useState({
     "total_pages": 1,
@@ -26,12 +38,17 @@ function App() {
   const [currentPage, setCurrentPage] = useState(1); // 目前頁數
   const productModalRef = useRef(null);
 
+  const [tempProduct, setTempProduct] = useState({
+    ...initTempProduct
+  });
+
   useEffect(() => {
     if (getToken()) {
       checkAdmin();
     }
     productModalRef.current = new bootstrap.Modal('#productModal', {
-      keyboard: false
+      keyboard: false,
+      backdrop: 'static'
     });
   }, []);
 
@@ -237,7 +254,148 @@ function App() {
       setCurrentPage(newCurrentPage);
     }
   };
+
   // === 頁數群組 end ===
+
+  /**
+   * 處理產品資料變更事件
+   * @param {Object} e 事件對象
+   * @param {string} e.target.id - 觸發事件的元素的 ID
+   * @param {string} e.target.value - 觸發事件的元素的值
+   */
+  const handletempProductChange = (e) => {
+    const { id, value } = e.target;
+    setTempProduct((prevData) => ({
+      ...prevData,
+      [id]: value,
+    }));
+  };
+
+  /**
+   * 新增圖片欄位
+   */
+  const handleAddImage = () => {
+    setTempProduct((prevData) => ({
+      ...prevData,
+      imagesUrl: [...prevData.imagesUrl, ""],
+    }));
+  };
+
+  /**
+   * 刪除最後一個圖片欄位
+   */
+  const handleRemoveImage = () => {
+    setTempProduct((prevData) => ({
+      ...prevData,
+      imagesUrl: prevData.imagesUrl.slice(0, -1),
+    }));
+  };
+
+  /**
+   * 處理圖片變更事件
+   * @param {number} index - 圖片索引
+   * @param {string} value - 圖片網址
+   */
+  const handleImageChange = (index, value) => {
+    const newImagesUrl = [...tempProduct.imagesUrl];
+    newImagesUrl[index] = value;
+    setTempProduct((prevData) => ({
+      ...prevData,
+      imagesUrl: newImagesUrl,
+    }));
+  };
+
+  /**
+   * 檢查必填欄位是否有值
+   * @returns {boolean} 如果所有必填欄位都有值，返回 true，否則返回 false。
+   */
+  const checkRequired = () => {
+    if (!tempProduct.imageUrl || !tempProduct.title || !tempProduct.category || !tempProduct.unit || !tempProduct.origin_price || !tempProduct.price) {
+      if (!tempProduct.imageUrl) {
+        alert("請輸入圖片網址");
+        return false;
+      };
+      if (!tempProduct.title) {
+        alert("請輸入標題");
+        return false;
+      }
+      if (!tempProduct.category) {
+        alert("請輸入分類");
+        return false;
+      }
+      if (!tempProduct.unit) {
+        alert("請輸入單位");
+        return false;
+      }
+      if (!tempProduct.origin_price) {
+        alert("請輸入原價");
+        return false;
+      }
+      if (!tempProduct.price) {
+        alert("請輸入售價");
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * 檢查價格是否為正數
+   * @param {number} number - 要檢查的數字
+   * @returns {boolean} 如果數字是正數，返回 true，否則返回 false
+   */
+  const checkPrice = (number) => {
+    const num = Number(number);
+    if (isNaN(num) || num < 0) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * 提交新增產品表單
+   * @returns {Promise<void>} 無返回值
+   */
+  const handleSubmittempProduct = async () => {
+    if (false === checkRequired()) {
+      return;
+    }
+
+    if (false === checkPrice(tempProduct.origin_price)) {
+      alert("原價請輸入大於 0 的數字");
+      return;
+    }
+
+    if (false === checkPrice(tempProduct.price)) {
+      alert("售價請輸入大於 0 的數字");
+      return;
+    }
+
+    setIsLoading(true);
+    productModalRef.current.hide();
+
+    const reqPayload = {
+      ...tempProduct,
+      origin_price: Number(tempProduct.origin_price),
+      price: Number(tempProduct.price),
+    };
+
+    try {
+      const response = await axios.post(`${API_BASE}/api/${API_PATH}/admin/product`, {
+        data: reqPayload,
+      });
+      if (!response.data.success) {
+        throw new Error(response.data.message);
+      }
+      alert("新增商品成功");
+      fetchProducts();
+    } catch (error) {
+      alert("新增商品失敗: " + error);
+      productModalRef.current.show();
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <>
@@ -254,7 +412,9 @@ function App() {
 
           <div className="container">
             <div className="text-end mt-4">
-              <button className="btn btn-primary">建立新的產品</button>
+              <button className="btn btn-primary" onClick={() => productModalRef.current.show()}>
+                建立新的產品
+              </button>
             </div>
             <table className="table mt-4">
               <thead>
@@ -408,18 +568,33 @@ function App() {
                       <input
                         type="text"
                         className="form-control"
+                        id="imageUrl"
+                        value={tempProduct.imageUrl}
+                        onChange={handletempProductChange}
                         placeholder="請輸入圖片連結"
                       />
                     </div>
-                    <img className="img-fluid" src="" alt="" />
+                    <img className="img-fluid" src={tempProduct.imageUrl} alt="" />
                   </div>
+                  {tempProduct.imagesUrl.map((url, index) => (
+                    <div className="mb-2" key={index}>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={url}
+                        onChange={(e) => handleImageChange(index, e.target.value)}
+                        placeholder="請輸入圖片連結"
+                      />
+                      {url && (<img className="img-fluid" src={url} alt="" />)}
+                    </div>
+                  ))}
                   <div>
-                    <button className="btn btn-outline-primary btn-sm d-block w-100">
+                    <button className="btn btn-outline-primary btn-sm d-block w-100" onClick={handleAddImage}>
                       新增圖片
                     </button>
                   </div>
                   <div>
-                    <button className="btn btn-outline-danger btn-sm d-block w-100">
+                    <button className="btn btn-outline-danger btn-sm d-block w-100" onClick={handleRemoveImage}>
                       刪除圖片
                     </button>
                   </div>
@@ -431,6 +606,8 @@ function App() {
                       id="title"
                       type="text"
                       className="form-control"
+                      value={tempProduct.title}
+                      onChange={handletempProductChange}
                       placeholder="請輸入標題"
                     />
                   </div>
@@ -442,6 +619,8 @@ function App() {
                         id="category"
                         type="text"
                         className="form-control"
+                        value={tempProduct.category}
+                        onChange={handletempProductChange}
                         placeholder="請輸入分類"
                       />
                     </div>
@@ -451,6 +630,8 @@ function App() {
                         id="unit"
                         type="text"
                         className="form-control"
+                        value={tempProduct.unit}
+                        onChange={handletempProductChange}
                         placeholder="請輸入單位"
                       />
                     </div>
@@ -464,6 +645,8 @@ function App() {
                         type="number"
                         min="0"
                         className="form-control"
+                        value={tempProduct.origin_price}
+                        onChange={handletempProductChange}
                         placeholder="請輸入原價"
                       />
                     </div>
@@ -474,6 +657,8 @@ function App() {
                         type="number"
                         min="0"
                         className="form-control"
+                        value={tempProduct.price}
+                        onChange={handletempProductChange}
                         placeholder="請輸入售價"
                       />
                     </div>
@@ -485,6 +670,8 @@ function App() {
                     <textarea
                       id="description"
                       className="form-control"
+                      value={tempProduct.description}
+                      onChange={handletempProductChange}
                       placeholder="請輸入產品描述"
                     ></textarea>
                   </div>
@@ -493,6 +680,8 @@ function App() {
                     <textarea
                       id="content"
                       className="form-control"
+                      value={tempProduct.content}
+                      onChange={handletempProductChange}
                       placeholder="請輸入說明內容"
                     ></textarea>
                   </div>
@@ -502,6 +691,11 @@ function App() {
                         id="is_enabled"
                         className="form-check-input"
                         type="checkbox"
+                        checked={tempProduct.is_enabled}
+                        onChange={(e) => setTempProduct((prevData) => ({
+                          ...prevData,
+                          is_enabled: e.target.checked,
+                        }))}
                       />
                       <label className="form-check-label" htmlFor="is_enabled">
                         是否啟用
@@ -519,7 +713,9 @@ function App() {
               >
                 取消
               </button>
-              <button type="button" className="btn btn-primary">確認</button>
+              <button type="button" className="btn btn-primary" onClick={handleSubmittempProduct}>
+                確認
+              </button>
             </div>
           </div>
         </div>
