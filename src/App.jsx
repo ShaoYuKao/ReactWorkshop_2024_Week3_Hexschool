@@ -449,6 +449,31 @@ function App() {
     }
   };
 
+  /**
+   * 刪除商品
+   * @param {string} productId - 要刪除的商品 ID
+   */
+  const handleDeleteProduct = async (productId) => {
+    if (!window.confirm("確定要刪除此商品嗎？")) {
+      return;
+    }
+  
+    setIsLoading(true);
+  
+    try {
+      const response = await axios.delete(`${API_BASE}/api/${API_PATH}/admin/product/${productId}`);
+      if (!response.data.success) {
+        throw new Error(response.data.message);
+      }
+      alert("刪除商品成功");
+      fetchProducts();
+    } catch (error) {
+      alert("刪除商品失敗: " + error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <>
       <Loading loading={isLoading} background="rgba(46, 204, 113, 0.5)" loaderColor="#3498db" />
@@ -495,7 +520,7 @@ function App() {
                           <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => handleEditProduct(item)}>
                             編輯
                           </button>
-                          <button type="button" className="btn btn-outline-danger btn-sm">
+                          <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => handleDeleteProduct(item.id)}>
                             刪除
                           </button>
                         </div>
