@@ -37,11 +37,11 @@ function App() {
   }); // 分頁資訊
   const [currentGroup, setCurrentGroup] = useState(0); // 目前群組索引
   const [currentPage, setCurrentPage] = useState(1); // 目前頁數
-  const productModalRef = useRef(null);
+  const productModalRef = useRef(null); // 產品 Modal 的 ref
 
   const [tempProduct, setTempProduct] = useState({
     ...initTempProduct
-  });
+  }); // 暫存產品資料
 
   useEffect(() => {
     if (getToken()) {
@@ -258,6 +258,28 @@ function App() {
   // === 頁數群組 end ===
 
   /**
+   * 開啟產品 Modal
+   */
+  const openProductModal = () => {
+    productModalRef.current.show();
+  }
+
+  /**
+   * 關閉產品 Modal
+   */
+  const closeProductModal = () => {
+    productModalRef.current.hide();
+  }
+
+  /**
+   * 開啟新增產品 Modal
+   */
+  const handleCreateProduct = () => {
+    clearTempProduct();
+    openProductModal();
+  };
+
+  /**
    * 處理產品資料變更事件
    * @param {Object} e 事件對象
    * @param {string} e.target.id - 觸發事件的元素的 ID
@@ -275,10 +297,15 @@ function App() {
    * 新增圖片欄位
    */
   const handleAddImage = () => {
-    setTempProduct((prevData) => ({
-      ...prevData,
-      imagesUrl: [...prevData.imagesUrl, ""],
-    }));
+    setTempProduct((prevData) => {
+      if (prevData.imagesUrl.length >= 5) {
+        return prevData;
+      }
+      return {
+        ...prevData,
+        imagesUrl: [...prevData.imagesUrl, ""],
+      };
+    });
   };
 
   /**
@@ -381,10 +408,14 @@ function App() {
     }
 
     setIsLoading(true);
-    productModalRef.current.hide();
+    closeProductModal();
+
+    // 清除 tempProduct.imagesUrl 裡的空字串
+    const imagesUrl = tempProduct.imagesUrl.filter((url) => url.trim() !== "");
 
     const reqPayload = {
       ...tempProduct,
+      imagesUrl,
       origin_price: Number(tempProduct.origin_price),
       price: Number(tempProduct.price),
     };
@@ -401,7 +432,7 @@ function App() {
       fetchProducts();
     } catch (error) {
       alert("新增商品失敗: " + error);
-      productModalRef.current.show();
+      openProductModal();
     } finally {
       setIsLoading(false);
     }
@@ -413,7 +444,7 @@ function App() {
    */
   const handleEditProduct = (product) => {
     setTempProduct(product);
-    productModalRef.current.show();
+    openProductModal();
   };
 
   /**
@@ -436,10 +467,14 @@ function App() {
     }
 
     setIsLoading(true);
-    productModalRef.current.hide();
+    closeProductModal();
+
+    // 清除 tempProduct.imagesUrl 裡的空字串
+    const imagesUrl = tempProduct.imagesUrl.filter((url) => url.trim() !== "");
 
     const reqPayload = {
       ...tempProduct,
+      imagesUrl,
       origin_price: Number(tempProduct.origin_price),
       price: Number(tempProduct.price),
     };
@@ -456,7 +491,7 @@ function App() {
       fetchProducts();
     } catch (error) {
       alert("編輯商品失敗: " + error);
-      productModalRef.current.show();
+      openProductModal();
     } finally {
       setIsLoading(false);
     }
@@ -477,7 +512,7 @@ function App() {
 
           <div className="container">
             <div className="text-end mt-4">
-              <button className="btn btn-primary" onClick={() => productModalRef.current.show()}>
+              <button className="btn btn-primary" onClick={handleCreateProduct}>
                 建立新的產品
               </button>
             </div>
