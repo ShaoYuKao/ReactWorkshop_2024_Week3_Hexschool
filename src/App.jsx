@@ -27,7 +27,6 @@ function App() {
   }); // 登入表單資料
   const [isAuth, setIsAuth] = useState(false);  // 是否為管理員
   const [products, setProducts] = useState([]); // 產品列表
-  // const [tempProduct, setTempProduct] = useState(null); // 單一產品細節
   const [isLoading, setIsLoading] = useState(false); // 是否載入中
   const [pagination, setPagination] = useState({
     "total_pages": 1,
