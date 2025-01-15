@@ -387,57 +387,7 @@ function App() {
       ...initTempProduct
     });
   }
-
-  /**
-   * 提交新增產品表單
-   * @returns {Promise<void>} 無返回值
-   */
-  const handleSubmittempProduct = async () => {
-    if (false === checkRequired()) {
-      return;
-    }
-
-    if (false === checkPrice(tempProduct.origin_price)) {
-      alert("原價請輸入大於 0 的數字");
-      return;
-    }
-
-    if (false === checkPrice(tempProduct.price)) {
-      alert("售價請輸入大於 0 的數字");
-      return;
-    }
-
-    setIsLoading(true);
-    closeProductModal();
-
-    // 清除 tempProduct.imagesUrl 裡的空字串
-    const imagesUrl = tempProduct.imagesUrl.filter((url) => url.trim() !== "");
-
-    const reqPayload = {
-      ...tempProduct,
-      imagesUrl,
-      origin_price: Number(tempProduct.origin_price),
-      price: Number(tempProduct.price),
-    };
-
-    try {
-      const response = await axios.post(`${API_BASE}/api/${API_PATH}/admin/product`, {
-        data: reqPayload,
-      });
-      if (!response.data.success) {
-        throw new Error(response.data.message);
-      }
-      alert("新增商品成功");
-      clearTempProduct();
-      fetchProducts();
-    } catch (error) {
-      alert("新增商品失敗: " + error);
-      openProductModal();
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  
   /**
    * 處理編輯產品的邏輯
    * @param {Object} product - 要編輯的產品對象
@@ -446,51 +396,53 @@ function App() {
     setTempProduct(product);
     openProductModal();
   };
-
+  
   /**
-   * 提交編輯產品表單
+   * 提交產品表單
+   * 根據 tempProduct.id 判斷是新增還是編輯產品
    * @returns {Promise<void>} 無返回值
    */
-  const handleSubmitEditProduct = async () => {
+  const handleSubmitProduct = async () => {
     if (false === checkRequired()) {
       return;
     }
-
+  
     if (false === checkPrice(tempProduct.origin_price)) {
       alert("原價請輸入大於 0 的數字");
       return;
     }
-
+  
     if (false === checkPrice(tempProduct.price)) {
       alert("售價請輸入大於 0 的數字");
       return;
     }
-
+  
     setIsLoading(true);
     closeProductModal();
-
+  
     // 清除 tempProduct.imagesUrl 裡的空字串
     const imagesUrl = tempProduct.imagesUrl.filter((url) => url.trim() !== "");
-
+  
     const reqPayload = {
       ...tempProduct,
       imagesUrl,
       origin_price: Number(tempProduct.origin_price),
       price: Number(tempProduct.price),
     };
-
+  
     try {
-      const response = await axios.put(`${API_BASE}/api/${API_PATH}/admin/product/${tempProduct.id}`, {
-        data: reqPayload,
-      });
+      const response = tempProduct.id
+        ? await axios.put(`${API_BASE}/api/${API_PATH}/admin/product/${tempProduct.id}`, { data: reqPayload })
+        : await axios.post(`${API_BASE}/api/${API_PATH}/admin/product`, { data: reqPayload });
+  
       if (!response.data.success) {
         throw new Error(response.data.message);
       }
-      alert("編輯商品成功");
+      alert(tempProduct.id ? "編輯商品成功" : "新增商品成功");
       clearTempProduct();
       fetchProducts();
     } catch (error) {
-      alert("編輯商品失敗: " + error);
+      alert((tempProduct.id ? "編輯" : "新增") + "商品失敗: " + error);
       openProductModal();
     } finally {
       setIsLoading(false);
@@ -789,7 +741,7 @@ function App() {
                     <div className="form-check">
                       <input
                         id="is_enabled"
-                        className="form-check-input"
+                        className="form-check-input d-flex me-2"
                         type="checkbox"
                         checked={tempProduct.is_enabled}
                         onChange={(e) => setTempProduct((prevData) => ({
@@ -813,7 +765,7 @@ function App() {
               >
                 取消
               </button>
-              <button type="button" className="btn btn-primary" onClick={tempProduct.id ? handleSubmitEditProduct : handleSubmittempProduct}>
+              <button type="button" className="btn btn-primary" onClick={handleSubmitProduct}>
                 確認
               </button>
             </div>
